@@ -40,6 +40,9 @@ INSTALLED_APPS = [
     # Third party apps
     'rest_framework',
     "corsheaders",
+
+    # Local apps
+    'client_side_flow',
 ]
 
 MIDDLEWARE = [
@@ -116,8 +119,14 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-# CORS
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+CORS_ALLOW_CREDENTIALS = True
+
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = False
+
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
