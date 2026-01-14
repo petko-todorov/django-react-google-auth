@@ -128,7 +128,6 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     "accept",
     "content-type",
-    "user-agent",
     "x-csrftoken",
     "x-requested-with",
 ]
@@ -158,3 +157,4 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = config('GOOGLE_CLIENT_SECRET')
