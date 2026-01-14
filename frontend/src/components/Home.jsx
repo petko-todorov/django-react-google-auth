@@ -5,7 +5,6 @@ import { getCookie } from '../utils/getCookie';
 
 const Home = () => {
     const { user, loading, setUser } = useContext(AuthContext);
-    console.log(user);
 
     const handleLogout = async () => {
         try {
