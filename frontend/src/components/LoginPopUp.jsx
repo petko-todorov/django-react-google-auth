@@ -1,37 +1,41 @@
 import { useContext } from 'react';
-import { GoogleLogin } from '@react-oauth/google';
+import { useGoogleLogin } from '@react-oauth/google';
 import { AuthContext } from '../AuthContext';
 
 const LoginPopUp = () => {
     const { setUser } = useContext(AuthContext);
 
-    const handleSuccess = async (googleResponse) => {
-        try {
-            const response = await fetch(
-                'http://localhost:8000/api/auth/google-popup-login/',
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: googleResponse.credential }),
-                    credentials: 'include',
-                }
-            );
+    const login = useGoogleLogin({
+        flow: 'auth-code',
+        onSuccess: async (codeResponse) => {
+            try {
+                const response = await fetch(
+                    'http://localhost:8000/api/auth/google-popup-login/',
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ code: codeResponse.code }),
+                    }
+                );
 
-            const data = await response.json();
-            if (response.ok) {
-                setUser(data.user);
+                if (response.ok) {
+                    const data = await response.json();
+                    setUser(data.user);
+                } else {
+                    const errorData = await response.json();
+                    console.error('Login failed:', errorData);
+                }
+            } catch (error) {
+                console.error('Login failed:', error);
             }
-        } catch (error) {
-            console.error('Login failed', error);
-        }
-    };
+        },
+        onError: () => console.log('Login Failed'),
+    });
 
     return (
         <>
-            <GoogleLogin
-                onSuccess={handleSuccess}
-                onError={() => console.log('Login Failed')}
-            />
+            <button onClick={() => login()}>Login with Google</button>
         </>
     );
 };
