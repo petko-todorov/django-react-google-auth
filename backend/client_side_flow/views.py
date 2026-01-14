@@ -5,9 +5,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.contrib.auth.models import User
-from google.oauth2 import id_token
-from google.auth.transport import requests
 from django.conf import settings
+import requests
 
 
 class VerifySessionView(APIView):
@@ -32,48 +31,73 @@ class VerifySessionView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class GoogleLoginView(APIView):
+class GoogleAuthCodeLoginView(APIView):
     permission_classes = [permissions.AllowAny]
-    authentication_classes = []
 
     def post(self, request):
-        token = request.data.get('token')
-
-        if not token:
-            return Response({"error": "Token is required"}, status=status.HTTP_400_BAD_REQUEST)
+        code = request.data.get("code")
+        if not code:
+            return Response(
+                {"detail": "Authorization code is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
-            id_info = id_token.verify_oauth2_token(
-                token,
-                requests.Request(),
-                settings.GOOGLE_CLIENT_ID,
-                clock_skew_in_seconds=60
+            token_response = requests.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "code": code,
+                    "client_id": settings.GOOGLE_CLIENT_ID,
+                    "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                    "redirect_uri": "postmessage",
+                    "grant_type": "authorization_code",
+                },
+                timeout=10
             )
-            email = id_info.get('email')
+            token_response.raise_for_status()
+            tokens = token_response.json()
 
-            user, created = User.objects.get_or_create(
-                email=email,
-                defaults={
-                    'username': email,
-                    'first_name': id_info.get('given_name', ''),
-                    'last_name': id_info.get('family_name', ''),
-                }
+            access_token = tokens.get("access_token")
+
+            user_info_response = requests.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                params={"access_token": access_token}
+            )
+            user_info_response.raise_for_status()
+            id_info = user_info_response.json()
+
+        except requests.RequestException as e:
+            return Response(
+                {"detail": "Failed to exchange code or get user info."},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
-            login(request, user)
-            return Response({
-                "status": "success",
+        email = id_info.get("email")
+        if not email:
+            return Response({"detail": "Email not provided by Google."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user, _ = User.objects.get_or_create(
+            username=email,
+            defaults={
+                "email": email,
+                "first_name": id_info.get("given_name", ""),
+                "last_name": id_info.get("family_name", ""),
+            }
+        )
+
+        login(request, user)
+
+        return Response(
+            {
                 "user": {
+                    "id": user.id,
                     "email": user.email,
                     "first_name": user.first_name,
                     "last_name": user.last_name,
                 }
-            }, status=status.HTTP_200_OK)
-
-        except ValueError as e:
-            return Response({"error": f"Invalid Google Token: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class LogoutView(APIView):
