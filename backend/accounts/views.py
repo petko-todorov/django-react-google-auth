@@ -9,10 +9,11 @@ from django.conf import settings
 import requests
 
 
+# Create your views here.
 class VerifySessionView(APIView):
     permission_classes = [permissions.AllowAny]
 
-    @method_decorator(ensure_csrf_cookie)  # ВАЖНО: Гарантира изпращането на csrftoken бисквитката
+    @method_decorator(ensure_csrf_cookie)
     def get(self, request):
         try:
             if request.user.is_authenticated:
@@ -31,7 +32,7 @@ class VerifySessionView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class GoogleAuthCodeLoginView(APIView):
+class GooglePopupLoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
