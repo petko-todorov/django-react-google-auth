@@ -1,6 +1,6 @@
 from django.urls import path
 
-from client_side_flow.views import VerifySessionView, GooglePopupLoginView, LogoutView
+from accounts.views import VerifySessionView, GooglePopupLoginView, LogoutView
 
 urlpatterns = [
     path('verify/', VerifySessionView.as_view(), name='verify_session'),
