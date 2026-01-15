@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     "corsheaders",
 
     # Local apps
-    'client_side_flow',
+    'accounts',
 ]
 
 MIDDLEWARE = [
