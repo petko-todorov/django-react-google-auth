@@ -32,16 +32,22 @@ class VerifySessionView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class GooglePopupLoginView(APIView):
+class GoogleLoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
         code = request.data.get("code")
+        flow = request.data.get("flow")
+
         if not code:
-            return Response(
-                {"detail": "Authorization code is required."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"detail": "Code is required."}, status=400)
+
+        if flow == 'popup':
+            redirect_uri = "postmessage"
+        elif flow == 'redirect':
+            redirect_uri = "http://localhost:5173/google-callback"
+        else:
+            return Response({"detail": "Invalid or missing flow type."}, status=400)
 
         try:
             token_response = requests.post(
@@ -50,7 +56,7 @@ class GooglePopupLoginView(APIView):
                     "code": code,
                     "client_id": settings.GOOGLE_CLIENT_ID,
                     "client_secret": settings.GOOGLE_CLIENT_SECRET,
-                    "redirect_uri": "postmessage",
+                    "redirect_uri": redirect_uri,
                     "grant_type": "authorization_code",
                 },
                 timeout=10
@@ -58,47 +64,37 @@ class GooglePopupLoginView(APIView):
             token_response.raise_for_status()
             tokens = token_response.json()
 
-            access_token = tokens.get("access_token")
-
-            user_info_response = requests.get(
+            user_info = requests.get(
                 "https://www.googleapis.com/oauth2/v3/userinfo",
-                params={"access_token": access_token}
+                params={"access_token": tokens.get("access_token")},
+                timeout=10
+            ).json()
+            google_id = user_info.get("sub")
+            email = user_info.get("email")
+
+            user, _ = User.objects.get_or_create(
+                username=google_id,
+                defaults={
+                    "email": email,
+                    "first_name": user_info.get("given_name", ""),
+                    "last_name": user_info.get("family_name", ""),
+                }
             )
-            user_info_response.raise_for_status()
-            id_info = user_info_response.json()
 
-        except requests.RequestException as e:
-            return Response(
-                {"detail": "Failed to exchange code or get user info."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            login(request, user)
 
-        email = id_info.get("email")
-        if not email:
-            return Response({"detail": "Email not provided by Google."}, status=status.HTTP_400_BAD_REQUEST)
-
-        user, _ = User.objects.get_or_create(
-            username=email,
-            defaults={
-                "email": email,
-                "first_name": id_info.get("given_name", ""),
-                "last_name": id_info.get("family_name", ""),
-            }
-        )
-
-        login(request, user)
-
-        return Response(
-            {
+            return Response({
                 "user": {
                     "id": user.id,
                     "email": user.email,
                     "first_name": user.first_name,
                     "last_name": user.last_name,
+                    "picture": user_info.get("picture", "")
                 }
-            },
-            status=status.HTTP_200_OK,
-        )
+            }, status=200)
+
+        except Exception as e:
+            return Response({"detail": str(e)}, status=400)
 
 
 class LogoutView(APIView):
