@@ -10,12 +10,15 @@ const LoginPopUp = () => {
         onSuccess: async (codeResponse) => {
             try {
                 const response = await fetch(
-                    'http://localhost:8000/api/auth/google-popup-login/',
+                    'http://localhost:8000/api/auth/google-login/',
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
-                        body: JSON.stringify({ code: codeResponse.code }),
+                        body: JSON.stringify({
+                            code: codeResponse.code,
+                            flow: 'popup',
+                        }),
                     }
                 );
 
@@ -30,12 +33,12 @@ const LoginPopUp = () => {
                 console.error('Login failed:', error);
             }
         },
-        onError: () => console.log('Login Failed'),
+        onError: () => console.log('Login failed'),
     });
 
     return (
         <>
-            <button onClick={() => login()}>Login with Google</button>
+            <button onClick={() => login()}>Login with Google Popup</button>
         </>
     );
 };
