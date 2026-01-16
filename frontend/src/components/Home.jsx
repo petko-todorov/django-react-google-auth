@@ -1,7 +1,8 @@
 import { useContext } from 'react';
 import { AuthContext } from '../AuthContext';
 import LoginPopUp from './LoginPopUp';
-import { getCookie } from '../utils/getCookie';
+import LoginRedirect from './LoginRedirect';
+import { getCookie } from '../utils/getCookie.js';
 
 const Home = () => {
     const { user, loading, setUser } = useContext(AuthContext);
@@ -28,7 +29,7 @@ const Home = () => {
         }
     };
 
-    if (loading) return <p>Зареждане...</p>;
+    if (loading) return <h2>Loading...</h2>;
 
     return (
         <>
@@ -38,11 +39,15 @@ const Home = () => {
                         Name: {user.first_name} {user.last_name}
                     </p>
                     <p>Email: {user.email}</p>
-                    {user.picture && <img src={user.picture} alt="Profile" />}
                     <button onClick={handleLogout}>Изход</button>
                 </div>
             ) : (
-                <LoginPopUp />
+                <>
+                    <LoginPopUp />
+                    <br />
+                    <br />
+                    <LoginRedirect />
+                </>
             )}
         </>
     );
