@@ -7,6 +7,7 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     const checkAuth = async () => {
+        setLoading(true); 
         try {
             const response = await fetch(
                 'http://localhost:8000/api/auth/verify/',
